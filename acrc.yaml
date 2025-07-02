@@ -1,0 +1,19 @@
+start_page: "https://www.acrcimoveis.com.br/imoveis/pagina-1"
+allowed_domains:
+  - acrcimoveis.com.br
+blocked_domains:
+  - adm055940.superlogica.net
+
+filter_patterns:
+  - "*/imoveis/*"
+  - "*/alugar/*"
+  - "*/comprar/*"
+
+target_elements:
+  - div.dados_imovel
+  - div.descricao_imovel
+  - div.todos_itens
+
+max_depth: 2
+max_pages: 25
+
