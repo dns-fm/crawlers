@@ -1,0 +1,12 @@
+start_page: "https://jdlimoveisblumenau.com.br/venda/"
+allowed_domains:
+  - www.jdlimoveisblumenau.com.br
+
+filter_patterns:
+  - "*/venda/*"
+
+target_elements:
+  - div.pg-imovel
+
+max_depth: 2
+max_pages: 25

@@ -1,0 +1,13 @@
+start_page: "https://www.imobiliariaconexao.com.br/imoveis/?page=1&="
+allowed_domains:
+  - www.imobiliariaconexao.com.br
+
+filter_patterns:
+  - "*/imoveis/*"
+
+target_elements:
+  - div.imovel-detalhe
+  - div.pagina-interna pagina-imovel-detalhe
+
+max_depth: 2
+max_pages: 25
