@@ -5,13 +5,12 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "awslambdaric>=3.1.1",
+    "boto3>=1.39.3",
     "crawl4ai>=0.6.3",
     "dynaconf>=3.2.11",
+    "pydantic>=2.11.7",
 ]
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
 
 [tool.ruff]
 line-length = 120

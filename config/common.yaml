@@ -1,7 +1,7 @@
 browser:
   agent: CasIA/1.0
 llm:
-  api_key: ""
+  api_token: ""
   provider: "openrouter/google/gemini-2.0-flash-exp:free"
   prompt: |
     Você é um especialista em análise de imóveis no mercado brasileiro.
@@ -11,3 +11,6 @@ llm:
     mencionado explicitamente ou claramente inferido do contexto, caso contrário retorne false.
     Informações relevantes ao domínio que não estão no schema devem ser incluidas nos atributos.
     Não tente adivinhar informações que não estejam explícitas ou fortemente implicadas no texto. 
+
+s3:
+  bucket_name: "casia-imobiliarias-crawler"

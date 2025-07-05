@@ -1,31 +1,27 @@
 import asyncio
-import os
 import json
+import os
 import argparse
+import tempfile
+import boto3
+from pathlib import Path
+from pydantic import BaseModel, Field
+from typing import List, Literal, Final
 from crawl4ai import AsyncWebCrawler, LLMExtractionStrategy, LLMConfig, BrowserConfig, CrawlerRunConfig, CacheMode, SemaphoreDispatcher, RateLimiter
-from pydantic import BaseModel
 from crawl4ai.deep_crawling import BestFirstCrawlingStrategy
 from crawl4ai.deep_crawling.filters import (
     FilterChain,
     DomainFilter,
-    URLPatternFilter,
-    ContentTypeFilter
+    URLPatternFilter
 )
 from dynaconf import Dynaconf
 
-class Area(BaseModel):
-    value: float
-    unit: str
-
-from pydantic import BaseModel, Field
-from typing import List, Literal
-
-# --- Modelos Auxiliares ---
 
 class Area(BaseModel):
     """Representa uma medida de área."""
     value: float | None = Field(None, description="O valor numérico da área.")
     unit: str = Field("m²", description="A unidade de medida, com 'm²' como padrão.")
+
 
 class Location(BaseModel):
     """Dados de localização do imóvel."""
@@ -51,6 +47,7 @@ class Proximities(BaseModel):
     proximo_aeroporto: bool | None = Field(None, description="Se é próximo a aeroporto.")
     proximo_rodovia: bool | None = Field(None, description="Se é próximo a rodovia.")
     proximo_clinica_veterinaria: bool | None = Field(None, description="Se é próximo a clínica veterinária.")
+
 
 class Attributes(BaseModel):
     """Dicionário de características e comodidades do imóvel e condomínio."""
@@ -83,7 +80,6 @@ class Attributes(BaseModel):
     vaga_coberta: bool | None = Field(None, description="A vaga de garagem é coberta.")
 
 
-# --- Modelo Principal ---
 
 class Property(BaseModel):
     """
@@ -122,10 +118,15 @@ class Property(BaseModel):
     attributes: Attributes = Field(default_factory=Attributes)
     proximities: Proximities = Field(default_factory=Proximities)
 
+
 class CrawlerEngine:
     def __init__(self, config: Dynaconf):
         self.config = config
-        self._browser_config = BrowserConfig(headless=True)
+        browser_options: Final[list[str]] = [
+            "--disable-gpu",
+            "--single-process"
+        ]
+        self._browser_config = BrowserConfig(headless=True, extra_args=browser_options)
         domain_filter = DomainFilter(
             allowed_domains=config.get('allowed_domains', []),
             blocked_domains=config.get('blocked_domains', [])
@@ -134,7 +135,8 @@ class CrawlerEngine:
         filter_chain = FilterChain([domain_filter, url_filter])
 
         # LLM config
-        llm_config = LLMConfig(provider=config.llm.provider, api_token=config.llm.api_key)
+        api_token = os.environ.get('LLM_API_TOKEN') or config.llm.api_token
+        llm_config = LLMConfig(provider=config.llm.provider, api_token=api_token)
         
         strategy = LLMExtractionStrategy(llm_config,
                                          schema=Property.model_json_schema(),  # JSON schema of the data model
@@ -155,7 +157,9 @@ class CrawlerEngine:
             extraction_strategy=strategy)
 
     async def run(self):
+        print("Starting crawler")
         async with AsyncWebCrawler(config=self._browser_config) as crawler:
+            print("crawling", self.config.start_page)
             results = await crawler.arun(
                 url=self.config.start_page,
                 config=self._crawler_run_config
@@ -164,6 +168,29 @@ class CrawlerEngine:
             for result in results:
                 crawled[result.url] = json.loads(result.extracted_content)
             return crawled
+
+
+def handler(event, context):
+    print("Processing event", event)
+    config_file = os.environ.get("CONFIG_FILE", "acrc.yaml")
+    lambda_config = Dynaconf(
+        envvar_prefix="",
+        merge_enabled=True,
+        settings_files=[
+            "common.yaml",
+            config_file
+        ]
+    )
+    with tempfile.TemporaryFile(mode='w+t') as tmp_file:
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(main(lambda_config, tmp_file))
+
+        s3 = boto3.client('s3')
+        try:
+            s3.upload_file(tmp_file, lambda_config.s3.bucket, Path(config_file).name)
+        except Exception as ex:
+            print("Unable to save file to s3", ex)
+
 
 async def main(config: Dynaconf, output_file: str):
     engine = CrawlerEngine(config)
@@ -174,8 +201,8 @@ async def main(config: Dynaconf, output_file: str):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--base-config-file", type=str, default="common.yaml")
-    parser.add_argument("--config-file", type=str, default="conexao.yaml")
+    parser.add_argument("--base-config-file", type=str, default="config/common.yaml")
+    parser.add_argument("--config-file", type=str, default="config/conexao.yaml")
     parser.add_argument("--output-file", type=str, default="imoveis.json")
     params = parser.parse_args()
 
