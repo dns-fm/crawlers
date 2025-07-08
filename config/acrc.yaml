@@ -17,3 +17,7 @@ target_elements:
 max_depth: 2
 max_pages: 25
 
+keywords:
+  - "Descrição do imóvel"
+
+weight: 0.7

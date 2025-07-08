@@ -16,24 +16,40 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     uv sync --frozen --no-dev
 
-FROM unclecode/crawl4ai:latest
+FROM python:3.11-bookworm
 
 ARG LAMBDA_ROOT
 COPY --from=builder  ${LAMBDA_ROOT} ${LAMBDA_ROOT}
-ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends debian-archive-keyring \
-    libX11 libXcomposite libXcursor libXdamage libXext libXi libXtst cups-libs \
-    libXScrnSaver pango at-spi2-atk gtk3 iputils libdrm nss alsa-lib \
-    libgbm fontconfig freetype freetype-devel ipa-gothic-fonts \
-    && apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get install -y --no-install-recommends \
+    libglib2.0-0 \
+    libnss3 \
+    libnspr4 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libdbus-1-3 \
+    libxcb1 \
+    libxkbcommon0 \
+    libx11-6 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxext6 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    libpango-1.0-0 \
+    libcairo2 \
+    libasound2 \
+    libatspi2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
 
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright-browsers
 
 ENV PATH="${LAMBDA_ROOT}/.venv/bin:$PATH"
-RUN PLAYWRIGHT_BROWSERS_PATH=/ms-playwright-browsers playwright install chromium
-
+ENV PLAYWRIGHT_BROWSERS_PATH="/ms-playwright-browsers"
+RUN playwright install chromium
 
 WORKDIR ${LAMBDA_ROOT}
 ADD app.py ${LAMBDA_ROOT}
@@ -50,7 +66,6 @@ COPY entry_script.sh /
 RUN chmod +x /entry_script.sh
 
 ENV CRAWL4_AI_BASE_DIRECTORY="/tmp"
-ENV PLAYWRIGHT_BROWSERS_PATH="/ms-playwright-browsers"
 
 ENTRYPOINT [ "/entry_script.sh" ]
 CMD ["app.handler"]

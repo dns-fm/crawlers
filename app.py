@@ -7,6 +7,7 @@ import boto3
 from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import List, Literal, Final
+from crawl4ai.deep_crawling.scorers import KeywordRelevanceScorer
 from crawl4ai import AsyncWebCrawler, LLMExtractionStrategy, LLMConfig, BrowserConfig, CrawlerRunConfig, CacheMode, SemaphoreDispatcher, RateLimiter
 from crawl4ai.deep_crawling import BestFirstCrawlingStrategy
 from crawl4ai.deep_crawling.filters import (
@@ -122,17 +123,25 @@ class Property(BaseModel):
 class CrawlerEngine:
     def __init__(self, config: Dynaconf):
         self.config = config
-        browser_options: Final[list[str]] = [
-            "--disable-gpu",
-            "--single-process"
-        ]
-        self._browser_config = BrowserConfig(headless=True, extra_args=browser_options)
+        # browser_options: Final[list[str]] = [
+        #     "--disable-gpu",
+        #     "--single-process"
+        # ]
+        self._browser_config = BrowserConfig(
+            headless=True,
+            verbose=True
+        )
         domain_filter = DomainFilter(
             allowed_domains=config.get('allowed_domains', []),
             blocked_domains=config.get('blocked_domains', [])
         )
         url_filter = URLPatternFilter(patterns=config.get('filter_patterns', []))
         filter_chain = FilterChain([domain_filter, url_filter])
+
+        scorer = KeywordRelevanceScorer(
+            keywords=config.get("keywords", []),
+            weight=config.get("weight", 0)
+        )
 
         # LLM config
         api_token = os.environ.get('LLM_API_TOKEN') or config.llm.api_token
@@ -152,12 +161,13 @@ class CrawlerEngine:
                 max_depth=config.max_depth, 
                 include_external=False,
                 filter_chain=filter_chain,
+                url_scorer=scorer,
                 max_pages=config.max_pages,
             ),
             extraction_strategy=strategy)
 
     async def run(self):
-        print("Starting crawler")
+        print(f"Starting crawler {self.config.start_page}")
         async with AsyncWebCrawler(config=self._browser_config) as crawler:
             print("crawling", self.config.start_page)
             results = await crawler.arun(
@@ -166,7 +176,10 @@ class CrawlerEngine:
             )
             crawled = {}
             for result in results:
-                crawled[result.url] = json.loads(result.extracted_content)
+                try:
+                    crawled[result.url] = json.loads(result.extracted_content)
+                except TypeError as ex:
+                    print(f"Error parsing: {result.url}", ex)
             return crawled
 
 
