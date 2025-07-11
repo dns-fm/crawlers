@@ -123,13 +123,14 @@ class Property(BaseModel):
 class CrawlerEngine:
     def __init__(self, config: Dynaconf):
         self.config = config
-        # browser_options: Final[list[str]] = [
-        #     "--disable-gpu",
-        #     "--single-process"
-        # ]
+        browser_options: Final[list[str]] = [
+            "--disable-gpu",
+            "--single-process"
+        ]
         self._browser_config = BrowserConfig(
             headless=True,
-            verbose=True
+            verbose=True,
+            extra_args=browser_options
         )
         domain_filter = DomainFilter(
             allowed_domains=config.get('allowed_domains', []),
