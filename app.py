@@ -2,7 +2,6 @@ import asyncio
 import json
 import os
 import argparse
-import tempfile
 import boto3
 from pathlib import Path
 from pydantic import BaseModel, Field
@@ -79,7 +78,6 @@ class Attributes(BaseModel):
     horta: bool | None = Field(None, description="Possui horta comunitária ou privativa.")
     acessibilidade: bool | None = Field(None, description="Possui recursos de acessibilidade.")
     vaga_coberta: bool | None = Field(None, description="A vaga de garagem é coberta.")
-
 
 
 class Property(BaseModel):
@@ -195,26 +193,23 @@ def handler(event, context):
             config_file
         ]
     )
-    with tempfile.TemporaryFile(mode='w+t') as tmp_file:
-        loop = asyncio.get_event_loop()
-        filename: str = tmp_file.name
-        loop.run_until_complete(main(lambda_config, filename))
 
-        s3 = boto3.client('s3')
-        try:
-            s3.upload_file(filename,
-                lambda_config.s3.bucket,
-                Path(config_file).name)
-        except Exception as ex:
-            print("Unable to save file to s3", ex)
+    loop = asyncio.get_event_loop()
+    results = loop.run_until_complete(main(lambda_config))
+
+    s3 = boto3.client('s3')
+    try:
+        s3.put_object(Bucket=lambda_config.s3.bucket_name,
+                      Key=Path(config_file).name,
+                      Body=json.dumps(results),
+                      ContentType="application/json")
+    except Exception as ex:
+        print("Unable to save file to s3", ex)
 
 
-async def main(config: Dynaconf, output_file: str):
+async def main(config: Dynaconf):
     engine = CrawlerEngine(config)
-    items = await engine.run()
-    with open(output_file, 'w') as fp:
-        json.dump(items, fp)
-    print(f"Saved results to {output_file}")
+    return await engine.run()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -233,4 +228,7 @@ if __name__ == "__main__":
         ]
     )
 
-    asyncio.run(main(config, params.output_file))
+    items = asyncio.run(main(config))
+    with open(params.output_file, 'w') as fp:
+        json.dump(items, fp)
+    print(f"Saved results to {params.output_file}")
