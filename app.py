@@ -196,11 +196,14 @@ def handler(event, context):
     )
     with tempfile.TemporaryFile(mode='w+t') as tmp_file:
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(main(lambda_config, tmp_file))
+        filename: str = tmp_file.name
+        loop.run_until_complete(main(lambda_config, filename))
 
         s3 = boto3.client('s3')
         try:
-            s3.upload_file(tmp_file, lambda_config.s3.bucket, Path(config_file).name)
+            s3.upload_file(filename,
+                lambda_config.s3.bucket,
+                Path(config_file).name)
         except Exception as ex:
             print("Unable to save file to s3", ex)
 
