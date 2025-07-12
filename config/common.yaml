@@ -1,7 +1,6 @@
 browser:
   agent: CasIA/1.0
 llm:
-  api_token: ""
   provider: "openrouter/google/gemini-2.0-flash-exp:free"
   prompt: |
     Você é um especialista em análise de imóveis no mercado brasileiro.

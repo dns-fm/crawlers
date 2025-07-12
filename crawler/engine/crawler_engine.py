@@ -29,7 +29,7 @@ class CrawlerEngine:
             verbose=True,
         )
         self._item_url_pattern = re.compile(self._config.items_url_pattern)
-        api_token = os.environ.get('LLM_API_TOKEN') or self._config.llm.api_token
+        api_token = os.environ.get('LLM_API_TOKEN')
         llm_config = LLMConfig(provider=self._config.llm.provider,
                                api_token=api_token)
 
