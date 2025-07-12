@@ -52,7 +52,8 @@ ENV PLAYWRIGHT_BROWSERS_PATH="/ms-playwright-browsers"
 RUN playwright install chromium
 
 WORKDIR ${LAMBDA_ROOT}
-ADD app.py ${LAMBDA_ROOT}
+ADD crawler ${LAMBDA_ROOT}
+ADD crawler/app.py ${LAMBDA_ROOT}
 ADD config ${LAMBDA_ROOT}
 
 # Download and add the Runtime Interface Emulator

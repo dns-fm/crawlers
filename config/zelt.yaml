@@ -1,3 +1,4 @@
+name: "zelt"
 start_page: "https://www.zelt.com.br/imoveis?page=1"
 allowed_domains:
   - www.zelt.com.br

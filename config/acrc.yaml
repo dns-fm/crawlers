@@ -6,17 +6,13 @@ blocked_domains:
   - adm055940.superlogica.net
 
 filter_patterns:
-  - "*/imoveis/*"
-  - "*/alugar/*"
-  - "*/comprar/*"
+  - "https://www.acrcimoveis.com.br/imoveis/pagina-*"
 
 target_elements:
   - div.dados_imovel
   - div.descricao_imovel
   - div.todos_itens
 
-max_depth: 2
-keywords:
-  - "Descrição do imóvel"
-
-weight: 0.7
+# depth para todas as páginas math.floor(total_pages / 3)
+max_depth: 1
+items_url_pattern: '^https:\/\/www\.acrcimoveis\.com\.br\/(comprar|imoveis|alugar)\/[a-z]{2}\/[a-z\-]+\/[a-z\-]+\/[a-z\-]+\/\d+\/?$'

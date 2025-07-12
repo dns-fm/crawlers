@@ -1,5 +1,5 @@
 [project]
-name = "crawlers"
+name = "crawler"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -7,7 +7,7 @@ requires-python = ">=3.11"
 dependencies = [
     "awslambdaric>=3.1.1",
     "boto3>=1.39.3",
-    "crawl4ai>=0.6.3",
+    "crawl4ai<0.7",
     "dynaconf>=3.2.11",
     "pydantic>=2.11.7",
 ]
@@ -30,5 +30,5 @@ plugins = ["pydantic.mypy"]
 
 [dependency-groups]
 dev = [
-    "ipython>=9.1.0",
+    "jupyterlab>=4.4.4",
 ]

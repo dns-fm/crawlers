@@ -19,3 +19,5 @@ simple.py
 .idea
 data
 docker
+.ipynb_checkpoints/
+*.ipynb
