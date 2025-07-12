@@ -3,17 +3,17 @@ import json
 import os
 import argparse
 import boto3
-from pathlib import Path
 from pydantic import BaseModel, Field
-from typing import List, Literal, Final
+from typing import List, Literal, Final, Optional
 from crawl4ai.deep_crawling.scorers import KeywordRelevanceScorer
-from crawl4ai import AsyncWebCrawler, LLMExtractionStrategy, LLMConfig, BrowserConfig, CrawlerRunConfig, CacheMode, SemaphoreDispatcher, RateLimiter
+from crawl4ai import AsyncWebCrawler, LLMExtractionStrategy, LLMConfig, BrowserConfig, CrawlerRunConfig, CacheMode
 from crawl4ai.deep_crawling import BestFirstCrawlingStrategy
 from crawl4ai.deep_crawling.filters import (
     FilterChain,
     DomainFilter,
     URLPatternFilter
 )
+from botocore.exceptions import ClientError
 from dynaconf import Dynaconf
 
 
@@ -30,6 +30,7 @@ class Location(BaseModel):
     cidade: str | None = Field(None, description="Nome da cidade.")
     estado: str | None = Field(None, description="Sigla do estado (ex: SC, SP).")
     zipcode: str | None = Field(None, description="Código de Endereçamento Postal (CEP).")
+
 
 class Proximities(BaseModel):
     """Descreve a proximidade do imóvel a vários pontos de interesse."""
@@ -118,9 +119,97 @@ class Property(BaseModel):
     proximities: Proximities = Field(default_factory=Proximities)
 
 
+class DB:
+    def __init__(self):
+        check_local = os.environ.get("IS_LOCAL")
+        if check_local is not None and check_local.lower() in ("1", "true"):
+            print("DynamoDB LOCAL")
+            self._dynamodb = boto3.resource("dynamodb",
+                                            region_name=os.environ.get("AWS_REGION"),
+                                            endpoint_url=os.environ.get("DYNAMO_ENDPOINT"))
+        else:
+            self._dynamodb = boto3.resource("dynamodb")
+        self._table = None
+
+    def exists(self, table_name):
+        """
+        Determines whether a table exists. As a side effect, stores the table in
+        a member variable.
+
+        :param table_name: The name of the table to check.
+        :return: True when the table exists; otherwise, False.
+        """
+        try:
+            table = self._dynamodb.Table(table_name)
+            table.load()
+            exists = True
+        except ClientError as err:
+            if err.response["Error"]["Code"] == "ResourceNotFoundException":
+                exists = False
+            else:
+                print(
+                    "Couldn't check for existence of %s. Here's why: %s: %s",
+                    table_name,
+                    err.response["Error"]["Code"],
+                    err.response["Error"]["Message"],
+                )
+                raise
+        else:
+            self._table = table
+        return exists
+
+    def create_table(self, table_name):
+        """
+        Creates an Amazon DynamoDB table that can be used to store movie data.
+        The table uses the release year of the movie as the partition key and the
+        title as the sort key.
+
+        :param table_name: The name of the table to create.
+        :return: The newly created table.
+        """
+        try:
+            print("Creating table", table_name)
+            self._table = self._dynamodb.create_table(
+                TableName=table_name,
+                KeySchema=[
+                    {"AttributeName": "name", "KeyType": "HASH"},  # Partition key
+                    {"AttributeName": "title", "KeyType": "RANGE"},  # Sort key
+                ],
+                AttributeDefinitions=[
+                    {"AttributeName": "name", "AttributeType": "S"},
+                    {"AttributeName": "title", "AttributeType": "S"},
+                ],
+                ProvisionedThroughput={
+                    'ReadCapacityUnits': 1,
+                    'WriteCapacityUnits': 1
+                }
+            )
+            self._table.wait_until_exists()
+        except ClientError as err:
+            print(
+                "Couldn't create table %s. Here's why: %s: %s",
+                table_name,
+                err.response["Error"]["Code"],
+                err.response["Error"]["Message"],
+            )
+            raise
+        except AttributeError as err:
+            print("Fudeu", err)
+        else:
+            return self._table
+
+    def add_item(self, item):
+        try:
+            self._table.put_item(Item=item)
+        except ClientError as err:
+            print("Couldn't add to table %s. %s", self._table, err)
+            raise
+
+
 class CrawlerEngine:
-    def __init__(self, config: Dynaconf):
-        self.config = config
+    def __init__(self, configuration: Dynaconf, db: Optional[DB] = None):
+        self._config = configuration
+        self._db = db
         browser_options: Final[list[str]] = [
             "--disable-gpu",
             "--single-process"
@@ -131,50 +220,58 @@ class CrawlerEngine:
             extra_args=browser_options
         )
         domain_filter = DomainFilter(
-            allowed_domains=config.get('allowed_domains', []),
-            blocked_domains=config.get('blocked_domains', [])
+            allowed_domains=self._config.get('allowed_domains', []),
+            blocked_domains=self._config.get('blocked_domains', [])
         )
-        url_filter = URLPatternFilter(patterns=config.get('filter_patterns', []))
+        url_filter = URLPatternFilter(patterns=self._config.get('filter_patterns', []))
         filter_chain = FilterChain([domain_filter, url_filter])
 
         scorer = KeywordRelevanceScorer(
-            keywords=config.get("keywords", []),
-            weight=config.get("weight", 0)
+            keywords=self._config.get("keywords", []),
+            weight=self._config.get("weight", 0)
         )
 
         # LLM config
-        api_token = os.environ.get('LLM_API_TOKEN') or config.llm.api_token
-        llm_config = LLMConfig(provider=config.llm.provider, api_token=api_token)
+        api_token = os.environ.get('LLM_API_TOKEN') or self._config.llm.api_token
+        llm_config = LLMConfig(provider=self._config.llm.provider, api_token=api_token)
         
         strategy = LLMExtractionStrategy(llm_config,
                                          schema=Property.model_json_schema(),  # JSON schema of the data model
                                          extraction_type="schema",  # Type of extraction to perform
-                                         instruction=config.llm.prompt,
+                                         instruction=self._config.llm.prompt,
                                          input_format="markdown",  # Format of the input content
                                          verbose=True)    
-
+        max_pages = self._config.get('max_pages')
+        print("Max pages limit:", max_pages)
         self._crawler_run_config = CrawlerRunConfig(
-            cache_mode=CacheMode.BYPASS,
-            target_elements=config.get('target_elements', []),
+            cache_mode=CacheMode.DISABLED,
+            target_elements=self._config.get('target_elements', []),
             deep_crawl_strategy=BestFirstCrawlingStrategy(
-                max_depth=config.max_depth, 
+                max_depth=self._config.max_depth,
                 include_external=False,
                 filter_chain=filter_chain,
                 url_scorer=scorer,
-                max_pages=config.max_pages,
+                max_pages=max_pages,
             ),
+            stream=True,
             extraction_strategy=strategy)
 
     async def run(self):
-        print(f"Starting crawler {self.config.start_page}")
+        print(f"Starting crawler {self._config.start_page}")
         async with AsyncWebCrawler(config=self._browser_config) as crawler:
-            print("crawling", self.config.start_page)
-            results = await crawler.arun(
-                url=self.config.start_page,
-                config=self._crawler_run_config
-            )
             crawled = {}
-            for result in results:
+            async for result in await crawler.arun(
+                url=self._config.start_page,
+                config=self._crawler_run_config
+            ):
+                if self._db is not None:
+                    values = json.loads(result.extracted_content)
+                    if values is None or len(values) == 0:
+                        continue
+                    item = dict(imobiliaria=self._config.name,
+                                url=result.url,
+                                **values[0])
+                    self._db.add_item(item)
                 try:
                     crawled[result.url] = json.loads(result.extracted_content)
                 except TypeError as ex:
@@ -183,28 +280,29 @@ class CrawlerEngine:
 
 
 def handler(event, context):
-    print("Processing event", event)
+    print("Processing event", event, "context", context)
+    value = event.get('name')
     config_file = os.environ.get("CONFIG_FILE", "acrc.yaml")
+    if value:
+        config_file = f"{value}.yaml"
     lambda_config = Dynaconf(
-        envvar_prefix="",
+        envvar_prefix=False,
         merge_enabled=True,
         settings_files=[
             "common.yaml",
             config_file
         ]
     )
+    db = DB()
+    exists: bool = db.exists(lambda_config.table_name)
+    if not exists:
+        db.create_table(lambda_config.table_name)
 
     loop = asyncio.get_event_loop()
-    results = loop.run_until_complete(main(lambda_config))
-
-    s3 = boto3.client('s3')
-    try:
-        s3.put_object(Bucket=lambda_config.s3.bucket_name,
-                      Key=Path(config_file).name,
-                      Body=json.dumps(results),
-                      ContentType="application/json")
-    except Exception as ex:
-        print("Unable to save file to s3", ex)
+    engine = CrawlerEngine(lambda_config, db=db)
+    loop.run_until_complete(engine.run())
+    print('Finished')
+    return 'ok'
 
 
 async def main(config: Dynaconf):

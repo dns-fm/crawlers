@@ -12,5 +12,7 @@ llm:
     Informações relevantes ao domínio que não estão no schema devem ser incluidas nos atributos.
     Não tente adivinhar informações que não estejam explícitas ou fortemente implicadas no texto. 
 
+table_name: "property"
+
 s3:
   bucket_name: "casia-imobiliarias-crawler"

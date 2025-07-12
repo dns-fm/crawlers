@@ -67,7 +67,7 @@ RUN chmod +x /entry_script.sh
 
 ENV CRAWL4_AI_BASE_DIRECTORY="/tmp"
 
-ENTRYPOINT [ "/entry_script.sh" ]
+ENTRYPOINT ["/entry_script.sh" ]
 CMD ["app.handler"]
 
 

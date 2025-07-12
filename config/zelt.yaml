@@ -10,4 +10,3 @@ target_elements:
   - div.top-listing
 
 max_depth: 2
-max_pages: 25

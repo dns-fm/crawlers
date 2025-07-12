@@ -1,3 +1,4 @@
+name: "acrc"
 start_page: "https://www.acrcimoveis.com.br/imoveis/pagina-1"
 allowed_domains:
   - acrcimoveis.com.br
@@ -15,8 +16,6 @@ target_elements:
   - div.todos_itens
 
 max_depth: 2
-max_pages: 25
-
 keywords:
   - "Descrição do imóvel"
 

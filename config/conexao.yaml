@@ -10,4 +10,3 @@ target_elements:
   - div.pagina-interna pagina-imovel-detalhe
 
 max_depth: 2
-max_pages: 25
