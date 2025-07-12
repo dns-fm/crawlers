@@ -30,7 +30,8 @@ class CrawlerEngine:
         )
         self._item_url_pattern = re.compile(self._config.items_url_pattern)
         api_token = os.environ.get('LLM_API_TOKEN') or self._config.llm.api_token
-        llm_config = LLMConfig(provider=self._config.llm.provider, api_token=api_token)
+        llm_config = LLMConfig(provider=self._config.llm.provider,
+                               api_token=api_token)
 
         self._extraction_strategy = LLMExtractionStrategy(llm_config,
                                                           schema=Property.model_json_schema(),
@@ -49,8 +50,7 @@ class CrawlerEngine:
                 stream=True,
                 mean_delay=0.5,
                 max_range=0.8,
-                # TODO: habilitar LLM
-                # extraction_strategy=self._extraction_strategy
+                extraction_strategy=self._extraction_strategy
             )
             async for result in await crawler.arun_many(urls=urls,
                                                         config=crawler_run_config):
