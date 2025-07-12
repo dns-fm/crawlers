@@ -86,7 +86,7 @@ class DynamoDB(DB):
 
     def add_item(self, item: CrawlerResult) -> None:
         try:
-            self._table.put_item(Item=item.model_dump_json())
+            self._table.put_item(Item=item.model_dump())
         except ClientError as err:
             print("Couldn't add to table %s. %s", self._table, err)
             raise

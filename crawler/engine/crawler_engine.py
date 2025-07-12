@@ -6,7 +6,7 @@ from crawl4ai import (
     LLMConfig,
     BrowserConfig,
     CrawlerRunConfig,
-    BestFirstCrawlingStrategy
+    BestFirstCrawlingStrategy,
 )
 from crawl4ai.deep_crawling.filters import (
     FilterChain,
@@ -47,14 +47,18 @@ class CrawlerEngine:
             crawler_run_config = CrawlerRunConfig(
                 target_elements=self._config.get("target_elements", []),
                 stream=True,
+                mean_delay=0.5,
+                max_range=0.8,
                 # TODO: habilitar LLM
                 # extraction_strategy=self._extraction_strategy
             )
-            async for result in await crawler.arun_many(urls=urls, config=crawler_run_config):
+            async for result in await crawler.arun_many(urls=urls,
+                                                        config=crawler_run_config):
                 crawler_result = CrawlerResult(name=self._config.name,
                                                url=result.url,
                                                content=result.markdown)
-                self._db.add_item(crawler_result)
+                if crawler_result.name is not None and crawler_result.url is not None:
+                    self._db.add_item(crawler_result)
                 total += 1
         print(f"Total de páginas inseridas {total}. Imobiliária {self._config.name}")
 
@@ -77,7 +81,7 @@ class CrawlerEngine:
                 max_depth=self._config.max_depth,
                 include_external=False,
                 filter_chain=filter_chain
-            ),
+            )
         )
 
         links = set()

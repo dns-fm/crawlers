@@ -1,8 +1,7 @@
 browser:
   agent: CasIA/1.0
 llm:
-  api_token: "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"
-#  "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"
+  api_token: "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"
   provider: "openrouter/google/gemini-2.0-flash-exp:free"
   prompt: |
     Você é um especialista em análise de imóveis no mercado brasileiro.

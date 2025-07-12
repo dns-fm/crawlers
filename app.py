@@ -1,7 +1,7 @@
 import asyncio
 import os
 from dynaconf import Dynaconf
-from crawler.database.db import DB
+from crawler.database.dynamo_db import DynamoDB
 from crawler.engine.crawler_engine import CrawlerEngine
 
 
@@ -19,7 +19,7 @@ def handler(event, context):
             config_file
         ]
     )
-    db = DB()
+    db = DynamoDB()
     exists: bool = db.exists(lambda_config.table_name)
     if not exists:
         db.create_table(lambda_config.table_name)

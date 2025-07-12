@@ -7,7 +7,6 @@ from crawler.models.crawler_result import CrawlerResult
 
 
 class LocalDB(DB):
-
     def __init__(self, output_file: str):
         print(f"Saving results to {output_file}")
         self._output_file = output_file
