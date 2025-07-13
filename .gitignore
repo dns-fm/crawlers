@@ -21,3 +21,5 @@ data
 docker
 .ipynb_checkpoints/
 *.ipynb
+
+imoveis.json

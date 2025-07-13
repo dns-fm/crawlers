@@ -1,13 +1,17 @@
 name: "zelt"
 start_page: "https://www.zelt.com.br/imoveis?page=1"
+next_pages:
+  pattern: "https://www.zelt.com.br/imoveis?page={{ page }}"
+  max_pages: 2
+
 allowed_domains:
-  - www.zelt.com.br
+  - zelt.com.br
 
 filter_patterns:
-  - "*/imovel/*"
+  - "https://www.zelt.com.br/imoveis?page=*"
 
 target_elements:
   - div.container
   - div.top-listing
 
-max_depth: 2
+items_url_pattern: '^https:\/\/www\.zelt\.com\.br\/(empreendimento|imovel)\/.*\/\d+-[A-Z]+$'

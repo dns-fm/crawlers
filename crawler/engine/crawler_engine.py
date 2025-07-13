@@ -1,5 +1,6 @@
 import os
 import re
+import jinja2
 from crawl4ai import (
     AsyncWebCrawler,
     LLMExtractionStrategy,
@@ -50,7 +51,8 @@ class CrawlerEngine:
                 stream=True,
                 mean_delay=0.5,
                 max_range=0.8,
-                extraction_strategy=self._extraction_strategy
+                # TODO: add LLM
+                # extraction_strategy=self._extraction_strategy
             )
             async for result in await crawler.arun_many(urls=urls,
                                                         config=crawler_run_config):
@@ -76,19 +78,27 @@ class CrawlerEngine:
             ContentTypeFilter(allowed_types=["text/html"])
         ])
 
-        crawler_run_config = CrawlerRunConfig(
-            deep_crawl_strategy=BestFirstCrawlingStrategy(
-                max_depth=self._config.max_depth,
-                include_external=False,
-                filter_chain=filter_chain
+        if self._config.get('next_pages'):
+            pages = []
+            template = jinja2.Environment().from_string(self._config.next_pages.pattern)
+            for current_page in range(1, self._config.next_pages.max_pages + 1):
+                pages.append(template.render(page=current_page))
+            urls = list(set([self._config.start_page] + pages))
+            crawl = crawler.arun_many(urls=urls, config=CrawlerRunConfig(stream=True))
+        else:
+            crawler_run_config = CrawlerRunConfig(
+                stream=True,
+                deep_crawl_strategy=BestFirstCrawlingStrategy(
+                    max_depth=self._config.max_depth,
+                    include_external=False,
+                    filter_chain=filter_chain
+                )
             )
-        )
+            crawl = crawler.arun(url=self._config.start_page, config=crawler_run_config)
 
         links = set()
-        results = await crawler.arun(url=self._config.start_page,
-                                     config=crawler_run_config)
-        for result in results:
-            for link in result.links['internal']:
+        async for result in await crawl:
+            for link in result.links.get('internal', []):
                 url = link['href']
                 if self._item_url_pattern.match(url):
                     links.add(url)

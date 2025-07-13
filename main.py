@@ -25,7 +25,7 @@ async def main(config: Dynaconf, output_file: str):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--base-config-file", type=str, default="config/common.yaml")
-    parser.add_argument("--config-file", type=str, default="config/acrc.yaml")
+    parser.add_argument("--config-file", type=str, default="config/zelt.yaml")
     parser.add_argument("--output-file", type=str, default="imoveis.json")
     params = parser.parse_args()
 
