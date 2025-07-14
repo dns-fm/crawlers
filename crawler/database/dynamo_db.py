@@ -6,7 +6,14 @@ from crawler.database.db import DB
 
 
 class DynamoDB(DB):
-    def __init__(self):
+    def __init__(self, name: str, table_name: str):
+        """
+        args:
+        name: nome da imobiliaria
+        table_name: nome da table
+        """
+        self._name: str = name
+        self._table_name: str = table_name
         check_local = os.environ.get("IS_LOCAL")
         if check_local is not None and check_local.lower() in ("1", "true"):
             print("DynamoDB LOCAL")
@@ -80,7 +87,7 @@ class DynamoDB(DB):
             )
             raise
         except AttributeError as err:
-            print("Fudeu", err)
+            print(err)
         else:
             return self._table
 
@@ -90,3 +97,19 @@ class DynamoDB(DB):
         except ClientError as err:
             print("Couldn't add to table %s. %s", self._table, err)
             raise
+
+    def filter_existing(self, urls: list[str]) -> list[str]:
+        keys = [{'PartitionKey': self._name,
+                 'SortKey': url} for url in urls]
+        try:
+            response = self._dynamodb.batch_get_item(
+                RequestItems={
+                    self._table_name: {'Keys': keys, 'ProjectionExpression': 'PartitionKey'}
+                }
+            )
+            items = response.get('Responses', {}).get(self._table_name, [])
+            retrieved = set([item['PartitionKey'] for item in items])
+            return list(set(urls).difference(retrieved))
+        except Exception as ex:
+            print("Error checking keys", ex)
+        return urls

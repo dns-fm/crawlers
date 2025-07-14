@@ -1,4 +1,5 @@
 import asyncio
+import pandas as pd
 import argparse
 from dynaconf import Dynaconf
 from crawler.engine.crawler_engine import CrawlerEngine
@@ -16,6 +17,13 @@ class LocalDB(DB):
             json_line = item.model_dump_json()
             fp.write(json_line + '\n')
 
+    def filter_existing(self, urls: list[str]) -> list[str]:
+        df = pd.read_json(self._output_file, lines=True)
+        if df.empty:
+            return urls
+        existing = set(df.url)
+        return list(set(urls).difference(existing))
+
 
 async def main(config: Dynaconf, output_file: str):
     local_db = LocalDB(output_file)
@@ -25,7 +33,7 @@ async def main(config: Dynaconf, output_file: str):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--base-config-file", type=str, default="config/common.yaml")
-    parser.add_argument("--config-file", type=str, default="config/zelt.yaml")
+    parser.add_argument("--config-file", type=str, default="config/acrc.yaml")
     parser.add_argument("--output-file", type=str, default="imoveis.json")
     params = parser.parse_args()
 

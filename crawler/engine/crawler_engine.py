@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import jinja2
@@ -46,22 +47,28 @@ class CrawlerEngine:
         total = 0
         async with AsyncWebCrawler(config=self._browser_config) as crawler:
             urls: list[str] = await self._get_urls(crawler)
-            crawler_run_config = CrawlerRunConfig(
-                target_elements=self._config.get("target_elements", []),
-                stream=True,
-                mean_delay=0.5,
-                max_range=0.8,
-                # TODO: add LLM
-                # extraction_strategy=self._extraction_strategy
-            )
-            async for result in await crawler.arun_many(urls=urls,
-                                                        config=crawler_run_config):
-                crawler_result = CrawlerResult(name=self._config.name,
-                                               url=result.url,
-                                               content=result.markdown)
-                if crawler_result.name is not None and crawler_result.url is not None:
-                    self._db.add_item(crawler_result)
-                total += 1
+            urls = self._db.filter_existing(urls)
+
+            if len(urls) > 0:
+                crawler_run_config = CrawlerRunConfig(
+                    target_elements=self._config.get("target_elements", []),
+                    stream=True,
+                    mean_delay=0.5,
+                    max_range=0.8,
+                    extraction_strategy=self._extraction_strategy
+                )
+
+                async for result in await crawler.arun_many(urls=urls,
+                                                            config=crawler_run_config):
+                    content = json.loads(result.extracted_content)
+                    for data in content:
+                        crawler_result = CrawlerResult(name=self._config.name,
+                                                       url=result.url,
+                                                       markdown=result.markdown,
+                                                       property=Property(**data))
+                        if crawler_result.name is not None and crawler_result.url is not None:
+                            self._db.add_item(crawler_result)
+                    total += 1
         print(f"Total de páginas inseridas {total}. Imobiliária {self._config.name}")
 
     async def _get_urls(self, crawler: AsyncWebCrawler) -> list[str]:

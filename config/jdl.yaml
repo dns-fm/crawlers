@@ -1,11 +1,13 @@
+name: "jdl"
 start_page: "https://jdlimoveisblumenau.com.br/venda/"
 allowed_domains:
-  - www.jdlimoveisblumenau.com.br
+  - jdlimoveisblumenau.com.br
 
-filter_patterns:
-  - "*/venda/*"
+filter_patterns: []
 
 target_elements:
   - div.pg-imovel
+  - div.row
 
 max_depth: 2
+items_url_pattern: "https:\/\/jdlimoveisblumenau\.com\.br\/imovel\/\d+\/.*$"

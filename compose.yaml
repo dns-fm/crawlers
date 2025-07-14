@@ -33,9 +33,6 @@ services:
       AWS_REGION: "sa-east-1"
     env_file:
       .env
-    volumes:
-      - ~/.aws:/root/.aws
-      - ./data:/tmp
     ports:
       - "9000:8080"
     depends_on:

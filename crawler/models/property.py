@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Literal
 
 
@@ -74,13 +74,13 @@ class Property(BaseModel):
     name: str = Field(..., description="Título principal do anúncio. Ex: 'Apartamento com 3 suítes'.")
     description: str | None = Field(None, description="Descrição completa do anúncio com formatação HTML.")
 
-    operation: Literal["VENDA", "ALUGUEL", "TEMPORADA"] = Field(..., description="Tipo de operação do anúncio.")
+    operation: str | None = Field(..., description="Tipo de operação do anúncio.")
 
     price: float | None = Field(None, description="Preço de venda do imóvel em reais, sem formatação.")
     rent_price: float | None = Field(None, description="Preço do aluguel mensal em reais, sem formatação.")
     condominio: float | None = Field(None, description="Valor mensal do condomínio em reais.")
     iptu: float | None = Field(None, description="Valor do IPTU.")
-    iptu_period: Literal["MENSAL", "ANUAL"] | None = Field(None, description="Periodicidade do valor do IPTU.")
+    iptu_period: str | None = Field(None, description="Periodicidade do valor do IPTU.")
 
     tipo: str | None = Field(None, description="Tipo do imóvel. Ex: APARTAMENTO, CASA, TERRENO.")
 
@@ -102,3 +102,5 @@ class Property(BaseModel):
     location: Location = Field(default_factory=Location)
     attributes: Attributes = Field(default_factory=Attributes)
     proximities: Proximities = Field(default_factory=Proximities)
+
+    model_config = ConfigDict(extra='allow')
