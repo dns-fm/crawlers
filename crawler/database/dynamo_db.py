@@ -1,5 +1,6 @@
 import os
 import boto3
+import hashlib
 from botocore.exceptions import ClientError
 from crawler.models.crawler_result import CrawlerResult
 from crawler.database.db import DB
@@ -22,18 +23,20 @@ class DynamoDB(DB):
                                             endpoint_url=os.environ.get("DYNAMO_ENDPOINT"))
         else:
             self._dynamodb = boto3.resource("dynamodb")
-        self._table = None
+        # exists: bool = self.exists()
+        # if not exists:
+        #     self.create_table()
+        self._table = self._dynamodb.Table(self._table_name)
 
-    def exists(self, table_name):
+    def exists(self):
         """
         Determines whether a table exists. As a side effect, stores the table in
         a member variable.
 
-        :param table_name: The name of the table to check.
         :return: True when the table exists; otherwise, False.
         """
         try:
-            table = self._dynamodb.Table(table_name)
+            table = self._dynamodb.Table(self._table_name)
             table.load()
             exists = True
         except ClientError as err:
@@ -42,7 +45,7 @@ class DynamoDB(DB):
             else:
                 print(
                     "Couldn't check for existence of %s. Here's why: %s: %s",
-                    table_name,
+                    self._table_name,
                     err.response["Error"]["Code"],
                     err.response["Error"]["Message"],
                 )
@@ -51,19 +54,18 @@ class DynamoDB(DB):
             self._table = table
         return exists
 
-    def create_table(self, table_name):
+    def create_table(self):
         """
         Creates an Amazon DynamoDB table that can be used to store movie data.
         The table uses the release year of the movie as the partition key and the
         title as the sort key.
 
-        :param table_name: The name of the table to create.
         :return: The newly created table.
         """
         try:
-            print("Creating table", table_name)
+            print("Creating table", self._table_name)
             self._table = self._dynamodb.create_table(
-                TableName=table_name,
+                TableName=self._table_name,
                 KeySchema=[
                     {"AttributeName": "name", "KeyType": "HASH"},  # Partition key
                     {"AttributeName": "url", "KeyType": "RANGE"},  # Sort key
@@ -81,7 +83,7 @@ class DynamoDB(DB):
         except ClientError as err:
             print(
                 "Couldn't create table %s. Here's why: %s: %s",
-                table_name,
+                self._table_name,
                 err.response["Error"]["Code"],
                 err.response["Error"]["Message"],
             )
@@ -93,7 +95,11 @@ class DynamoDB(DB):
 
     def add_item(self, item: CrawlerResult) -> None:
         try:
-            self._table.put_item(Item=item.model_dump())
+            _item = item.model_dump()
+            _item["markdown"] = hashlib.sha256(item.markdown.encode("utf-8")).hexdigest(),
+            _item["created_at"] = item.created_at.isoformat()
+            _item["updated_at"] = item.created_at.isoformat()
+            self._table.put_item(Item=_item)
         except ClientError as err:
             print("Couldn't add to table %s. %s", self._table, err)
             raise

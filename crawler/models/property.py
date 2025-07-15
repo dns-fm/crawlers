@@ -1,10 +1,11 @@
 from pydantic import BaseModel, Field, ConfigDict
-from typing import List, Literal
+from typing import List
+from decimal import Decimal
 
 
 class Area(BaseModel):
     """Representa uma medida de área."""
-    value: float | None = Field(None, description="O valor numérico da área.")
+    value: Decimal | None = Field(None, description="O valor numérico da área.")
     unit: str = Field("m²", description="A unidade de medida, com 'm²' como padrão.")
 
 
@@ -76,10 +77,10 @@ class Property(BaseModel):
 
     operation: str | None = Field(..., description="Tipo de operação do anúncio.")
 
-    price: float | None = Field(None, description="Preço de venda do imóvel em reais, sem formatação.")
-    rent_price: float | None = Field(None, description="Preço do aluguel mensal em reais, sem formatação.")
-    condominio: float | None = Field(None, description="Valor mensal do condomínio em reais.")
-    iptu: float | None = Field(None, description="Valor do IPTU.")
+    price: Decimal | None = Field(None, description="Preço de venda do imóvel em reais, sem formatação.")
+    rent_price: Decimal | None = Field(None, description="Preço do aluguel mensal em reais, sem formatação.")
+    condominio: Decimal | None = Field(None, description="Valor mensal do condomínio em reais.")
+    iptu: Decimal | None = Field(None, description="Valor do IPTU.")
     iptu_period: str | None = Field(None, description="Periodicidade do valor do IPTU.")
 
     tipo: str | None = Field(None, description="Tipo do imóvel. Ex: APARTAMENTO, CASA, TERRENO.")
@@ -94,7 +95,7 @@ class Property(BaseModel):
     area_construida: Area | None = Field(default_factory=Area, description="Área construída (para casas).")
     area_terreno: Area | None = Field(default_factory=Area, description="Área total do terreno (para casas/terrenos).")
 
-    preco_medio_m2: float | None = Field(None, description="Preço médio por m² (calculado).")
+    preco_medio_m2: Decimal | None = Field(None, description="Preço médio por m² (calculado).")
 
     images: List[str] = Field(default_factory=list, description="Lista de URLs das imagens do imóvel.")
 
