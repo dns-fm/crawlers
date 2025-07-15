@@ -23,9 +23,9 @@ class DynamoDB(DB):
                                             endpoint_url=os.environ.get("DYNAMO_ENDPOINT"))
         else:
             self._dynamodb = boto3.resource("dynamodb")
-        # exists: bool = self.exists()
-        # if not exists:
-        #     self.create_table()
+        exists: bool = self.exists()
+        if not exists:
+            self.create_table()
         self._table = self._dynamodb.Table(self._table_name)
 
     def exists(self):
