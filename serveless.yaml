@@ -1,0 +1,15 @@
+provider:
+  name: aws
+  region: sa-east-1
+  environment:
+    ENVIRONMENT: dev
+
+acrc:
+  acrc:
+    image: 971901834579.dkr.ecr.sa-east-1.amazonaws.com/casia/crawler:latest
+    events:
+      - schedule:
+          rate: cron(0 0 * * ? *) # every 5 minutes
+          enabled: true
+          input:
+            name: acrc

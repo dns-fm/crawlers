@@ -8,7 +8,8 @@ from crawler.engine.crawler_engine import CrawlerEngine
 def handler(event, context):
     print("Processing event", event, "context", context)
     name = event.get('name', 'acrc')
-    config_file = f"{name}.yaml"
+    env = os.environ.get('ENVIRONMENT', 'dev')
+    config_file = f"config/{env}/{name}.yaml"
     lambda_config = Dynaconf(
         envvar_prefix=False,
         merge_enabled=True,

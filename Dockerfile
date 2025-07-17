@@ -66,7 +66,8 @@ RUN apt-get clean && apt-get update && \
 
 WORKDIR ${LAMBDA_ROOT}
 ADD app.py ${LAMBDA_ROOT}
-ADD config ${LAMBDA_ROOT}
+ADD config/dev ${LAMBDA_ROOT}/config/dev
+ADD config/prod ${LAMBDA_ROOT}/config/prod
 
 # Define the entrypoint script
 COPY entry_script.sh /
