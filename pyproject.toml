@@ -3,11 +3,11 @@ name = "crawler"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "awslambdaric>=3.1.1",
     "boto3>=1.39.3",
-    "crawl4ai<0.7",
+    "crawl4ai>=0.7.2",
     "dynaconf>=3.2.11",
     "litellm==1.73.6",
     "pandas>=2.3.1",
