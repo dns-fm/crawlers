@@ -32,9 +32,8 @@ services:
       AWS_ACCESS_KEY_ID: local
       AWS_SECRET_ACCESS_KEY: local
       AWS_REGION: "sa-east-1"
-      LLM_API_TOKEN: "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"
-#    env_file:
-#      .env
+    env_file:
+      .env
     ports:
       - "9000:8080"
     depends_on:
