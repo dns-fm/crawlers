@@ -1,9 +1,13 @@
 import asyncio
 import argparse
+import logging
 from dynaconf import Dynaconf
 from crawler.engine.crawler_engine import CrawlerEngine
 from crawler.database.dynamo_db import DynamoDB
+from crawler.database.local_db import LocalDB
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("casia-crawler")
 
 async def main(config: Dynaconf):
     db = DynamoDB(name=config.name, table_name=config.table_name)
@@ -16,7 +20,7 @@ if __name__ == "__main__":
     parser.add_argument("--config-file", type=str, default="config/dev/acrc.yaml")
     params = parser.parse_args()
 
-    print(f"Running crawler with {params.config_file}")
+    logger.info(f"Running crawler with {params.config_file}")
     global_config = Dynaconf(
         envvar_prefix="",
         merge_enabled=True,
